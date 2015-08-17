@@ -41,40 +41,30 @@ exports.login = function login(request, response) {
  */
 
 exports.authenticate = function authenticate(req, res) {
-  function formatResponse(to, apiError, humanReadableError) {
-    const preferJsonOverHtml = req.accepts('html, json') === 'json';
-    if (preferJsonOverHtml) {
-      if (apiError)
-        return res.send(400, {status: 'error', reason: apiError});
-      return res.send(200, {status: 'ok', email: req.session.emails[0]});
+  const SID = req.body && req.body.SID;
+  const password = req.body && req.body.password;
+  /*
+  req.session.emails = [email];
+  return formatResponse('/');
+  */
+  request.post("http://localhost/student-profile/student/auth.php", {
+    json: true,
+    body: {
+      sid: SID,
+      password: password
     }
-    if (humanReadableError)
-      req.flash('error', humanReadableError);
-    return res.redirect(303, to);
-  }
-
-  const assertion = req.body && req.body.assertion;
-  const verifierUrl = browserid.getVerifierUrl(configuration);
-  const audience = browserid.getAudience(req);
-
-  if (!assertion)
-    return formatResponse('/backpack/login', "assertion expected");
-
-  browserid.verify({
-    url: verifierUrl,
-    assertion: assertion,
-    audience: audience,
-  }, function (err, email) {
-    if (err) {
-      logger.error('Failed browserID verification: ');
-      logger.debug('Code: ' + err.code + "; Extra: " + err.extra);
-      return formatResponse('back', "browserID verification failed: " + err.message,
-                            "Could not verify with browserID!");
+  }, function(error, response, body){
+    if (error){
+      logger.error(error);
     }
-
-    req.session.emails = [email];
-    return formatResponse('/');
-  });
+    else if(body.err){
+      logger.error(body.err);
+    }
+    else{
+      req.session.emails = [SID + "@link.cuhk.edu.hk"];
+      res.redirect("/");
+    }
+  })
 };
 
 
